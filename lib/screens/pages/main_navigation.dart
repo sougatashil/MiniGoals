@@ -112,6 +112,8 @@ class _MainNavigationState extends State<MainNavigation> {
 
   /// Build the current page based on navigation state
   Widget _buildCurrentPage(AppPage currentPage) {
+    final navigationProvider = Provider.of<NavigationProvider>(context, listen: false);
+    
     switch (currentPage) {
       case AppPage.home:
         return const HomePage();
@@ -122,9 +124,17 @@ class _MainNavigationState extends State<MainNavigation> {
       case AppPage.addHabit:
         return const AddHabitPage();
       case AppPage.habitDetail:
-        return const HabitDetailPage();
+        final habitId = navigationProvider.selectedHabitId;
+        if (habitId == null) {
+          return const HomePage(); // Fallback if no habit selected
+        }
+        return HabitDetailPage(habitId: habitId);
       case AppPage.reward:
-        return const RewardPage();
+        final habitId = navigationProvider.rewardHabitId;
+        if (habitId == null) {
+          return const HomePage(); // Fallback if no habit selected
+        }
+        return RewardPage(habitId: habitId);
     }
   }
 }

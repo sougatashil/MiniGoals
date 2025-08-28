@@ -132,6 +132,16 @@ class Habit extends HiveObject {
     return completedDaysCount / 7.0;
   }
 
+  // Check if habit is perfect (all 7 days completed)
+  bool get isPerfect {
+    return completedDaysCount == 7;
+  }
+
+  // Get completion count (alias for completedDaysCount)
+  int get completionCount {
+    return completedDaysCount;
+  }
+
   // Check if habit is active (within 7 days and not completed)
   bool get isActive {
     final daysSinceStart = DateTime.now().difference(startDate).inDays;

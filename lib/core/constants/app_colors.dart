@@ -65,4 +65,25 @@ class AppColors {
   static Color getCategoryColor(String category) {
     return categoryColors[category.toLowerCase()] ?? primaryColor;
   }
+
+  static String getCategoryIcon(String category) {
+    switch (category.toLowerCase()) {
+      case 'health':
+        return '🏃';
+      case 'productivity':
+        return '⚡';
+      case 'learning':
+        return '📚';
+      case 'mindfulness':
+        return '🧘';
+      case 'creative':
+        return '🎨';
+      case 'finance':
+        return '💰';
+      case 'social':
+        return '👥';
+      default:
+        return '⭐';
+    }
+  }
 }

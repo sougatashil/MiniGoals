@@ -50,6 +50,16 @@ class NotificationSettings {
   }
 }
 
+// Constants for Hive keys to avoid magic strings
+class _SettingsKeys {
+  static const String notificationSettings = 'notificationSettings';
+  static const String appTheme = 'appTheme';
+  static const String animationsEnabled = 'animationsEnabled';
+  static const String weekStartDay = 'weekStartDay';
+  static const String firstLaunch = 'firstLaunch';
+  static const String memberSince = 'memberSince';
+}
+
 class SettingsProvider extends ChangeNotifier {
   final HiveService _hiveService = HiveService.instance;
   
@@ -94,19 +104,19 @@ class SettingsProvider extends ChangeNotifier {
       _clearError();
 
       // Load notification settings
-      final notificationMap = _hiveService.getSetting('notificationSettings', defaultValue: <String, dynamic>{});
+      final notificationMap = _hiveService.getSetting(_SettingsKeys.notificationSettings, defaultValue: <String, dynamic>{});
       if (notificationMap != null && notificationMap.isNotEmpty) {
         _notificationSettings = NotificationSettings.fromMap(Map<String, dynamic>.from(notificationMap));
       }
 
       // Load other settings
-      _appTheme = _parseTheme(_hiveService.getSetting('appTheme', defaultValue: 'dark') ?? 'dark');
-      _animationsEnabled = _hiveService.getSetting('animationsEnabled', defaultValue: true) ?? true;
-      _weekStartDay = _parseWeekStartDay(_hiveService.getSetting('weekStartDay', defaultValue: 1) ?? 1);
-      _isFirstLaunch = _hiveService.getSetting('firstLaunch', defaultValue: true) ?? true;
+      _appTheme = _parseTheme(_hiveService.getSetting(_SettingsKeys.appTheme, defaultValue: 'dark') ?? 'dark');
+      _animationsEnabled = _hiveService.getSetting(_SettingsKeys.animationsEnabled, defaultValue: true) ?? true;
+      _weekStartDay = _parseWeekStartDay(_hiveService.getSetting(_SettingsKeys.weekStartDay, defaultValue: WeekStartDay.monday.name));
+      _isFirstLaunch = _hiveService.getSetting(_SettingsKeys.firstLaunch, defaultValue: true) ?? true;
       
       // Load member since date
-      final memberSinceTimestamp = _hiveService.getSetting('memberSince');
+      final memberSinceTimestamp = _hiveService.getSetting(_SettingsKeys.memberSince);
       if (memberSinceTimestamp != null) {
         _memberSince = DateTime.fromMillisecondsSinceEpoch(memberSinceTimestamp);
       }
@@ -127,8 +137,8 @@ class SettingsProvider extends ChangeNotifier {
       _isFirstLaunch = false;
       _memberSince = DateTime.now();
       
-      await _hiveService.setSetting('firstLaunch', false);
-      await _hiveService.setSetting('memberSince', _memberSince!.millisecondsSinceEpoch);
+      await _hiveService.setSetting(_SettingsKeys.firstLaunch, false);
+      await _hiveService.setSetting(_SettingsKeys.memberSince, _memberSince!.millisecondsSinceEpoch);
       
       notifyListeners();
     } catch (e) {
@@ -138,53 +148,31 @@ class SettingsProvider extends ChangeNotifier {
 
   // Notification Settings
 
-  /// Update daily reminders setting
-  Future<void> setDailyReminders(bool enabled) async {
+  /// A generic method to update any notification setting.
+  Future<void> updateNotificationSetting({
+    bool? dailyReminders,
+    bool? morningMotivation,
+    bool? eveningCheckIn,
+    bool? achievementAlerts,
+  }) async {
     try {
-      _notificationSettings = _notificationSettings.copyWith(dailyReminders: enabled);
+      _notificationSettings = _notificationSettings.copyWith(
+        dailyReminders: dailyReminders,
+        morningMotivation: morningMotivation,
+        eveningCheckIn: eveningCheckIn,
+        achievementAlerts: achievementAlerts,
+      );
       await _saveNotificationSettings();
       notifyListeners();
     } catch (e) {
-      _setError('Failed to update daily reminders: $e');
-    }
-  }
-
-  /// Update morning motivation setting
-  Future<void> setMorningMotivation(bool enabled) async {
-    try {
-      _notificationSettings = _notificationSettings.copyWith(morningMotivation: enabled);
-      await _saveNotificationSettings();
-      notifyListeners();
-    } catch (e) {
-      _setError('Failed to update morning motivation: $e');
-    }
-  }
-
-  /// Update evening check-in setting
-  Future<void> setEveningCheckIn(bool enabled) async {
-    try {
-      _notificationSettings = _notificationSettings.copyWith(eveningCheckIn: enabled);
-      await _saveNotificationSettings();
-      notifyListeners();
-    } catch (e) {
-      _setError('Failed to update evening check-in: $e');
-    }
-  }
-
-  /// Update achievement alerts setting
-  Future<void> setAchievementAlerts(bool enabled) async {
-    try {
-      _notificationSettings = _notificationSettings.copyWith(achievementAlerts: enabled);
-      await _saveNotificationSettings();
-      notifyListeners();
-    } catch (e) {
-      _setError('Failed to update achievement alerts: $e');
+      _setError('Failed to update notification settings: $e');
     }
   }
 
   /// Save notification settings to storage
   Future<void> _saveNotificationSettings() async {
-    await _hiveService.setSetting('notificationSettings', _notificationSettings.toMap());
+    await _hiveService.setSetting(
+        _SettingsKeys.notificationSettings, _notificationSettings.toMap());
   }
 
   // Appearance Settings
@@ -193,7 +181,7 @@ class SettingsProvider extends ChangeNotifier {
   Future<void> setAppTheme(AppTheme theme) async {
     try {
       _appTheme = theme;
-      await _hiveService.setSetting('appTheme', theme.name);
+      await _hiveService.setSetting(_SettingsKeys.appTheme, theme.name);
       notifyListeners();
     } catch (e) {
       _setError('Failed to update app theme: $e');
@@ -204,7 +192,7 @@ class SettingsProvider extends ChangeNotifier {
   Future<void> setAnimationsEnabled(bool enabled) async {
     try {
       _animationsEnabled = enabled;
-      await _hiveService.setSetting('animationsEnabled', enabled);
+      await _hiveService.setSetting(_SettingsKeys.animationsEnabled, enabled);
       notifyListeners();
     } catch (e) {
       _setError('Failed to update animations setting: $e');
@@ -215,7 +203,7 @@ class SettingsProvider extends ChangeNotifier {
   Future<void> setWeekStartDay(WeekStartDay day) async {
     try {
       _weekStartDay = day;
-      await _hiveService.setSetting('weekStartDay', day == WeekStartDay.monday ? 1 : 0);
+      await _hiveService.setSetting(_SettingsKeys.weekStartDay, day.name);
       notifyListeners();
     } catch (e) {
       _setError('Failed to update week start day: $e');
@@ -243,35 +231,33 @@ class SettingsProvider extends ChangeNotifier {
       _clearError();
 
       // Import notification settings
-      if (settingsData.containsKey('notificationSettings')) {
+      if (settingsData.containsKey(_SettingsKeys.notificationSettings)) {
         _notificationSettings = NotificationSettings.fromMap(
-          Map<String, dynamic>.from(settingsData['notificationSettings'])
+          Map<String, dynamic>.from(settingsData[_SettingsKeys.notificationSettings])
         );
         await _saveNotificationSettings();
       }
 
       // Import other settings
-      if (settingsData.containsKey('appTheme')) {
-        _appTheme = _parseTheme(settingsData['appTheme']);
-        await _hiveService.setSetting('appTheme', _appTheme.name);
+      if (settingsData.containsKey(_SettingsKeys.appTheme)) {
+        _appTheme = _parseTheme(settingsData[_SettingsKeys.appTheme]);
+        await _hiveService.setSetting(_SettingsKeys.appTheme, _appTheme.name);
       }
 
-      if (settingsData.containsKey('animationsEnabled')) {
-        _animationsEnabled = settingsData['animationsEnabled'];
-        await _hiveService.setSetting('animationsEnabled', _animationsEnabled);
+      if (settingsData.containsKey(_SettingsKeys.animationsEnabled)) {
+        _animationsEnabled = settingsData[_SettingsKeys.animationsEnabled];
+        await _hiveService.setSetting(_SettingsKeys.animationsEnabled, _animationsEnabled);
       }
 
-      if (settingsData.containsKey('weekStartDay')) {
-        _weekStartDay = settingsData['weekStartDay'] == 'monday' 
-            ? WeekStartDay.monday 
-            : WeekStartDay.sunday;
-        await _hiveService.setSetting('weekStartDay', _weekStartDay == WeekStartDay.monday ? 1 : 0);
+      if (settingsData.containsKey(_SettingsKeys.weekStartDay)) {
+        _weekStartDay = _parseWeekStartDay(settingsData[_SettingsKeys.weekStartDay]);
+        await _hiveService.setSetting(_SettingsKeys.weekStartDay, _weekStartDay.name);
       }
 
       // Import member since date
-      if (settingsData.containsKey('memberSince') && settingsData['memberSince'] != null) {
-        _memberSince = DateTime.parse(settingsData['memberSince']);
-        await _hiveService.setSetting('memberSince', _memberSince!.millisecondsSinceEpoch);
+      if (settingsData.containsKey(_SettingsKeys.memberSince) && settingsData[_SettingsKeys.memberSince] != null) {
+        _memberSince = DateTime.parse(settingsData[_SettingsKeys.memberSince]);
+        await _hiveService.setSetting(_SettingsKeys.memberSince, _memberSince!.millisecondsSinceEpoch);
       }
 
       debugPrint('Settings imported successfully');
@@ -306,9 +292,9 @@ class SettingsProvider extends ChangeNotifier {
 
       // Save to storage
       await _saveNotificationSettings();
-      await _hiveService.setSetting('appTheme', _appTheme.name);
-      await _hiveService.setSetting('animationsEnabled', _animationsEnabled);
-      await _hiveService.setSetting('weekStartDay', 1);
+      await _hiveService.setSetting(_SettingsKeys.appTheme, _appTheme.name);
+      await _hiveService.setSetting(_SettingsKeys.animationsEnabled, _animationsEnabled);
+      await _hiveService.setSetting(_SettingsKeys.weekStartDay, WeekStartDay.monday.name);
 
       debugPrint('Settings reset to defaults');
       notifyListeners();
@@ -377,8 +363,15 @@ class SettingsProvider extends ChangeNotifier {
     }
   }
 
-  WeekStartDay _parseWeekStartDay(int day) {
-    return day == 1 ? WeekStartDay.monday : WeekStartDay.sunday;
+  WeekStartDay _parseWeekStartDay(dynamic day) {
+    if (day is String) {
+      return day == WeekStartDay.monday.name 
+            ? WeekStartDay.monday 
+            : WeekStartDay.sunday;
+    } else if (day is int) { // For backwards compatibility
+      return day == 1 ? WeekStartDay.monday : WeekStartDay.sunday;
+    }
+    return WeekStartDay.monday; // Default
   }
 
   void _setLoading(bool loading) {
@@ -394,6 +387,7 @@ class SettingsProvider extends ChangeNotifier {
 
   void _clearError() {
     _error = null;
+    notifyListeners();
   }
 
   @override

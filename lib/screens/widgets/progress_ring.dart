@@ -1,30 +1,24 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
-
-import '../../core/constants/app_colors.dart';
+import 'dart:math' as math;
 
 class ProgressRing extends StatefulWidget {
-  final double progress;
+  final double progress; // 0.0 to 1.0
   final double size;
   final double strokeWidth;
-  final Color color;
   final Color backgroundColor;
+  final Color progressColor;
   final Widget? child;
   final Duration animationDuration;
-  final Curve animationCurve;
-  final bool showBackground;
 
   const ProgressRing({
     super.key,
     required this.progress,
     this.size = 120,
     this.strokeWidth = 8,
-    this.color = AppColors.primaryColor,
-    this.backgroundColor = AppColors.borderColor,
+    this.backgroundColor = Colors.grey,
+    this.progressColor = Colors.blue,
     this.child,
     this.animationDuration = const Duration(milliseconds: 1000),
-    this.animationCurve = Curves.easeOutCubic,
-    this.showBackground = true,
   });
 
   @override
@@ -34,8 +28,7 @@ class ProgressRing extends StatefulWidget {
 class _ProgressRingState extends State<ProgressRing>
     with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
-  late Animation<double> _progressAnimation;
-  double _previousProgress = 0;
+  late Animation<double> _animation;
 
   @override
   void initState() {
@@ -44,15 +37,9 @@ class _ProgressRingState extends State<ProgressRing>
       duration: widget.animationDuration,
       vsync: this,
     );
-
-    _progressAnimation = Tween<double>(
-      begin: 0,
-      end: widget.progress.clamp(0.0, 1.0),
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: widget.animationCurve,
-    ));
-
+    _animation = Tween<double>(begin: 0.0, end: widget.progress).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
     _animationController.forward();
   }
 
@@ -60,15 +47,12 @@ class _ProgressRingState extends State<ProgressRing>
   void didUpdateWidget(ProgressRing oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.progress != widget.progress) {
-      _previousProgress = oldWidget.progress;
-      _progressAnimation = Tween<double>(
-        begin: _previousProgress.clamp(0.0, 1.0),
-        end: widget.progress.clamp(0.0, 1.0),
-      ).animate(CurvedAnimation(
-        parent: _animationController,
-        curve: widget.animationCurve,
-      ));
-
+      _animation = Tween<double>(
+        begin: oldWidget.progress,
+        end: widget.progress,
+      ).animate(
+        CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+      );
       _animationController.reset();
       _animationController.forward();
     }
@@ -86,237 +70,40 @@ class _ProgressRingState extends State<ProgressRing>
       width: widget.size,
       height: widget.size,
       child: Stack(
+        alignment: Alignment.center,
         children: [
-          // Progress Ring
           AnimatedBuilder(
-            animation: _progressAnimation,
+            animation: _animation,
             builder: (context, child) {
               return CustomPaint(
-                painter: ProgressRingPainter(
-                  progress: _progressAnimation.value,
-                  strokeWidth: widget.strokeWidth,
-                  color: widget.color,
-                  backgroundColor: widget.backgroundColor,
-                  showBackground: widget.showBackground,
-                ),
                 size: Size(widget.size, widget.size),
+                painter: _ProgressRingPainter(
+                  progress: _animation.value,
+                  strokeWidth: widget.strokeWidth,
+                  backgroundColor: widget.backgroundColor,
+                  progressColor: widget.progressColor,
+                ),
               );
             },
           ),
-          
-          // Center content
-          if (widget.child != null)
-            Center(
-              child: widget.child,
-            ),
+          if (widget.child != null) widget.child!,
         ],
       ),
     );
   }
 }
 
-class ProgressRingPainter extends CustomPainter {
+class _ProgressRingPainter extends CustomPainter {
   final double progress;
   final double strokeWidth;
-  final Color color;
   final Color backgroundColor;
-  final bool showBackground;
+  final Color progressColor;
 
-  ProgressRingPainter({
+  _ProgressRingPainter({
     required this.progress,
     required this.strokeWidth,
-    required this.color,
     required this.backgroundColor,
-    required this.showBackground,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = (size.width - strokeWidth) / 2;
-
-    // Background circle
-    if (showBackground) {
-      final backgroundPaint = Paint()
-        ..color = backgroundColor
-        ..strokeWidth = strokeWidth
-        ..style = PaintingStyle.stroke
-        ..strokeCap = StrokeCap.round;
-
-      canvas.drawCircle(center, radius, backgroundPaint);
-    }
-
-    // Progress arc
-    if (progress > 0) {
-      final progressPaint = Paint()
-        ..shader = LinearGradient(
-          colors: [
-            color,
-            color.withOpacity(0.8),
-            color,
-          ],
-          stops: const [0.0, 0.5, 1.0],
-        ).createShader(Rect.fromCircle(center: center, radius: radius))
-        ..strokeWidth = strokeWidth
-        ..style = PaintingStyle.stroke
-        ..strokeCap = StrokeCap.round;
-
-      const startAngle = -math.pi / 2; // Start from top
-      final sweepAngle = 2 * math.pi * progress;
-
-      canvas.drawArc(
-        Rect.fromCircle(center: center, radius: radius),
-        startAngle,
-        sweepAngle,
-        false,
-        progressPaint,
-      );
-
-      // Glow effect
-      if (progress > 0.1) {
-        final glowPaint = Paint()
-          ..color = color.withOpacity(0.3)
-          ..strokeWidth = strokeWidth + 2
-          ..style = PaintingStyle.stroke
-          ..strokeCap = StrokeCap.round
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
-
-        canvas.drawArc(
-          Rect.fromCircle(center: center, radius: radius),
-          startAngle,
-          sweepAngle,
-          false,
-          glowPaint,
-        );
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant ProgressRingPainter oldDelegate) {
-    return progress != oldDelegate.progress ||
-        strokeWidth != oldDelegate.strokeWidth ||
-        color != oldDelegate.color ||
-        backgroundColor != oldDelegate.backgroundColor ||
-        showBackground != oldDelegate.showBackground;
-  }
-}
-
-/// Multi-colored progress ring for category-based progress
-class MultiProgressRing extends StatefulWidget {
-  final List<ProgressSegment> segments;
-  final double size;
-  final double strokeWidth;
-  final Color backgroundColor;
-  final Widget? child;
-  final Duration animationDuration;
-
-  const MultiProgressRing({
-    super.key,
-    required this.segments,
-    this.size = 120,
-    this.strokeWidth = 8,
-    this.backgroundColor = AppColors.borderColor,
-    this.child,
-    this.animationDuration = const Duration(milliseconds: 1200),
-  });
-
-  @override
-  State<MultiProgressRing> createState() => _MultiProgressRingState();
-}
-
-class _MultiProgressRingState extends State<MultiProgressRing>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
-  late List<Animation<double>> _segmentAnimations;
-
-  @override
-  void initState() {
-    super.initState();
-    _animationController = AnimationController(
-      duration: widget.animationDuration,
-      vsync: this,
-    );
-
-    _createSegmentAnimations();
-    _animationController.forward();
-  }
-
-  void _createSegmentAnimations() {
-    _segmentAnimations = [];
-    
-    for (int i = 0; i < widget.segments.length; i++) {
-      final segment = widget.segments[i];
-      final delay = i * 0.1; // Stagger the animations
-      
-      _segmentAnimations.add(
-        Tween<double>(
-          begin: 0,
-          end: segment.progress.clamp(0.0, 1.0),
-        ).animate(CurvedAnimation(
-          parent: _animationController,
-          curve: Interval(delay, 1.0, curve: Curves.easeOutCubic),
-        )),
-      );
-    }
-  }
-
-  @override
-  void didUpdateWidget(MultiProgressRing oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.segments != oldWidget.segments) {
-      _createSegmentAnimations();
-      _animationController.reset();
-      _animationController.forward();
-    }
-  }
-
-  @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: widget.size,
-      height: widget.size,
-      child: Stack(
-        children: [
-          AnimatedBuilder(
-            animation: _animationController,
-            builder: (context, child) {
-              return CustomPaint(
-                painter: MultiProgressRingPainter(
-                  segments: widget.segments,
-                  segmentAnimations: _segmentAnimations,
-                  strokeWidth: widget.strokeWidth,
-                  backgroundColor: widget.backgroundColor,
-                ),
-                size: Size(widget.size, widget.size),
-              );
-            },
-          ),
-          if (widget.child != null)
-            Center(child: widget.child),
-        ],
-      ),
-    );
-  }
-}
-
-class MultiProgressRingPainter extends CustomPainter {
-  final List<ProgressSegment> segments;
-  final List<Animation<double>> segmentAnimations;
-  final double strokeWidth;
-  final Color backgroundColor;
-
-  MultiProgressRingPainter({
-    required this.segments,
-    required this.segmentAnimations,
-    required this.strokeWidth,
-    required this.backgroundColor,
+    required this.progressColor,
   });
 
   @override
@@ -333,65 +120,216 @@ class MultiProgressRingPainter extends CustomPainter {
 
     canvas.drawCircle(center, radius, backgroundPaint);
 
-    // Draw each segment
-    double currentAngle = -math.pi / 2; // Start from top
-    
-    for (int i = 0; i < segments.length; i++) {
-      final segment = segments[i];
-      final animatedProgress = segmentAnimations[i].value;
-      
-      if (animatedProgress > 0) {
-        final segmentAngle = 2 * math.pi * animatedProgress;
-        
-        final segmentPaint = Paint()
-          ..color = segment.color
-          ..strokeWidth = strokeWidth
-          ..style = PaintingStyle.stroke
-          ..strokeCap = StrokeCap.round;
+    // Progress arc
+    final progressPaint = Paint()
+      ..color = progressColor
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
 
-        canvas.drawArc(
-          Rect.fromCircle(center: center, radius: radius),
-          currentAngle,
-          segmentAngle,
-          false,
-          segmentPaint,
-        );
-        
-        currentAngle += segmentAngle;
-      }
+    const startAngle = -math.pi / 2; // Start from top
+    final sweepAngle = 2 * math.pi * progress;
+
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      startAngle,
+      sweepAngle,
+      false,
+      progressPaint,
+    );
+
+    // Add glow effect for progress
+    if (progress > 0) {
+      final glowPaint = Paint()
+        ..color = progressColor.withOpacity(0.3)
+        ..strokeWidth = strokeWidth + 2
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
+
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius),
+        startAngle,
+        sweepAngle,
+        false,
+        glowPaint,
+      );
     }
   }
 
   @override
-  bool shouldRepaint(covariant MultiProgressRingPainter oldDelegate) {
-    return segments != oldDelegate.segments ||
-        segmentAnimations != oldDelegate.segmentAnimations ||
-        strokeWidth != oldDelegate.strokeWidth ||
-        backgroundColor != oldDelegate.backgroundColor;
+  bool shouldRepaint(_ProgressRingPainter oldDelegate) {
+    return oldDelegate.progress != progress ||
+        oldDelegate.strokeWidth != strokeWidth ||
+        oldDelegate.backgroundColor != backgroundColor ||
+        oldDelegate.progressColor != progressColor;
   }
 }
 
-/// Data class for progress segments
-class ProgressSegment {
+class AnimatedProgressRing extends StatefulWidget {
   final double progress;
-  final Color color;
-  final String? label;
+  final double size;
+  final double strokeWidth;
+  final Color backgroundColor;
+  final List<Color> progressGradient;
+  final Widget? child;
+  final Duration animationDuration;
 
-  const ProgressSegment({
+  const AnimatedProgressRing({
+    super.key,
     required this.progress,
-    required this.color,
-    this.label,
+    this.size = 120,
+    this.strokeWidth = 8,
+    this.backgroundColor = Colors.grey,
+    this.progressGradient = const [Colors.blue, Colors.purple],
+    this.child,
+    this.animationDuration = const Duration(milliseconds: 1000),
   });
 
   @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is ProgressSegment &&
-          runtimeType == other.runtimeType &&
-          progress == other.progress &&
-          color == other.color &&
-          label == other.label;
+  State<AnimatedProgressRing> createState() => _AnimatedProgressRingState();
+}
+
+class _AnimatedProgressRingState extends State<AnimatedProgressRing>
+    with TickerProviderStateMixin {
+  late AnimationController _progressController;
+  late AnimationController _rotationController;
+  late Animation<double> _progressAnimation;
+  late Animation<double> _rotationAnimation;
 
   @override
-  int get hashCode => progress.hashCode ^ color.hashCode ^ label.hashCode;
+  void initState() {
+    super.initState();
+    
+    _progressController = AnimationController(
+      duration: widget.animationDuration,
+      vsync: this,
+    );
+    
+    _rotationController = AnimationController(
+      duration: const Duration(seconds: 2),
+      vsync: this,
+    );
+
+    _progressAnimation = Tween<double>(begin: 0.0, end: widget.progress).animate(
+      CurvedAnimation(parent: _progressController, curve: Curves.easeInOut),
+    );
+
+    _rotationAnimation = Tween<double>(begin: 0.0, end: 2 * math.pi).animate(
+      CurvedAnimation(parent: _rotationController, curve: Curves.linear),
+    );
+
+    _progressController.forward();
+    _rotationController.repeat();
+  }
+
+  @override
+  void didUpdateWidget(AnimatedProgressRing oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.progress != widget.progress) {
+      _progressAnimation = Tween<double>(
+        begin: oldWidget.progress,
+        end: widget.progress,
+      ).animate(
+        CurvedAnimation(parent: _progressController, curve: Curves.easeInOut),
+      );
+      _progressController.reset();
+      _progressController.forward();
+    }
+  }
+
+  @override
+  void dispose() {
+    _progressController.dispose();
+    _rotationController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: widget.size,
+      height: widget.size,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          AnimatedBuilder(
+            animation: Listenable.merge([_progressAnimation, _rotationAnimation]),
+            builder: (context, child) {
+              return Transform.rotate(
+                angle: _rotationAnimation.value * 0.1, // Subtle rotation
+                child: CustomPaint(
+                  size: Size(widget.size, widget.size),
+                  painter: _GradientProgressRingPainter(
+                    progress: _progressAnimation.value,
+                    strokeWidth: widget.strokeWidth,
+                    backgroundColor: widget.backgroundColor,
+                    progressGradient: widget.progressGradient,
+                  ),
+                ),
+              );
+            },
+          ),
+          if (widget.child != null) widget.child!,
+        ],
+      ),
+    );
+  }
+}
+
+class _GradientProgressRingPainter extends CustomPainter {
+  final double progress;
+  final double strokeWidth;
+  final Color backgroundColor;
+  final List<Color> progressGradient;
+
+  _GradientProgressRingPainter({
+    required this.progress,
+    required this.strokeWidth,
+    required this.backgroundColor,
+    required this.progressGradient,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = (size.width - strokeWidth) / 2;
+
+    // Background circle
+    final backgroundPaint = Paint()
+      ..color = backgroundColor
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    canvas.drawCircle(center, radius, backgroundPaint);
+
+    // Progress arc with gradient
+    if (progress > 0) {
+      final rect = Rect.fromCircle(center: center, radius: radius);
+      final gradient = SweepGradient(
+        colors: progressGradient,
+        stops: [0.0, 1.0],
+      );
+
+      final progressPaint = Paint()
+        ..shader = gradient.createShader(rect)
+        ..strokeWidth = strokeWidth
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round;
+
+      const startAngle = -math.pi / 2;
+      final sweepAngle = 2 * math.pi * progress;
+
+      canvas.drawArc(rect, startAngle, sweepAngle, false, progressPaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_GradientProgressRingPainter oldDelegate) {
+    return oldDelegate.progress != progress ||
+        oldDelegate.strokeWidth != strokeWidth ||
+        oldDelegate.backgroundColor != backgroundColor ||
+        oldDelegate.progressGradient != progressGradient;
+  }
 }

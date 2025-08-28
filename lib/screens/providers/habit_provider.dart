@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../../data/models/habit.dart';
+import '../../data/models/badge.dart' as models;
 import '../../data/services/hive_service.dart';
 
 class HabitProvider extends ChangeNotifier {
@@ -388,6 +389,66 @@ class HabitProvider extends ChangeNotifier {
   
   void _clearError() {
     _error = null;
+  }
+  
+  // Method aliases for UI compatibility
+  Future<void> refresh() => refreshHabits();
+  
+  Future<bool> addHabit({
+    required String title,
+    required HabitCategory category,
+  }) {
+    return createHabit(title: title, category: category);
+  }
+  
+  double getTodayCompletionRate() {
+    return todayCompletionRate.toDouble();
+  }
+  
+  int getTotalStreakDays() {
+    return _habits.fold(0, (sum, habit) => sum + habit.totalStreakDays);
+  }
+  
+  int getCompletedHabitsCount() {
+    return completedHabitsCount;
+  }
+  
+  int getPerfectWeeksCount() {
+    return _habits.where((h) => h.isPerfect).length;
+  }
+  
+  int getCurrentStreak() {
+    // Simple implementation - could be enhanced
+    return _habits.fold(0, (maxStreak, habit) {
+      final currentStreak = habit.completedDaysCount;
+      return currentStreak > maxStreak ? currentStreak : maxStreak;
+    });
+  }
+  
+  int getLongestStreak() {
+    return getCurrentStreak(); // Simplified for now
+  }
+  
+  List<models.Badge> getEarnedBadges() {
+    final totalDays = getTotalStreakDays();
+    return models.Badge.allBadges.where((badge) => totalDays >= badge.requiredDays).toList();
+  }
+  
+  models.Badge? getNextBadge() {
+    final totalDays = getTotalStreakDays();
+    return models.Badge.getNextBadge(totalDays);
+  }
+  
+  Map<HabitCategory, List<Habit>> getHabitsGroupedByCategory() {
+    final Map<HabitCategory, List<Habit>> grouped = {};
+    for (final category in HabitCategory.values) {
+      grouped[category] = getHabitsByCategory(category);
+    }
+    return grouped;
+  }
+  
+  Future<bool> resetAllData() {
+    return clearAllData();
   }
   
   @override
