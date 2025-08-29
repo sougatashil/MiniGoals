@@ -13,7 +13,7 @@ class CustomBottomNavigation extends StatelessWidget {
       builder: (context, navigationProvider, child) {
         return Container(
           decoration: BoxDecoration(
-            color: AppColors.backgroundColorLight.withOpacity(0.95),
+            color: AppColors.backgroundColorLight,
             border: const Border(
               top: BorderSide(
                 color: AppColors.borderColor,
@@ -21,45 +21,37 @@ class CustomBottomNavigation extends StatelessWidget {
               ),
             ),
           ),
-          child: ClipRRect(
-            child: BackdropFilter(
-              filter: const ColorFilter.mode(
-                Colors.black26,
-                BlendMode.darken,
+          child: SafeArea(
+            child: Container(
+              // Reduced height from 80 to 70
+              height: 70,
+              padding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                // Reduced vertical padding from 8 to 4
+                vertical: 4,
               ),
-              child: SafeArea(
-                child: Container(
-                  // Reduced height from 80 to 70
-                  height: 70,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    // Reduced vertical padding from 8 to 4
-                    vertical: 4,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _NavItem(
+                    icon: Icons.home_rounded,
+                    label: 'Home',
+                    isActive: navigationProvider.selectedBottomNavIndex == 0,
+                    onTap: () => navigationProvider.navigateToHome(),
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _NavItem(
-                        icon: Icons.home_rounded,
-                        label: 'Home',
-                        isActive: navigationProvider.selectedBottomNavIndex == 0,
-                        onTap: () => navigationProvider.navigateToHome(),
-                      ),
-                      _NavItem(
-                        icon: Icons.analytics_rounded,
-                        label: 'Stats',
-                        isActive: navigationProvider.selectedBottomNavIndex == 1,
-                        onTap: () => navigationProvider.navigateToStats(),
-                      ),
-                      _NavItem(
-                        icon: Icons.settings_rounded,
-                        label: 'Settings',
-                        isActive: navigationProvider.selectedBottomNavIndex == 2,
-                        onTap: () => navigationProvider.navigateToSettings(),
-                      ),
-                    ],
+                  _NavItem(
+                    icon: Icons.analytics_rounded,
+                    label: 'Stats',
+                    isActive: navigationProvider.selectedBottomNavIndex == 1,
+                    onTap: () => navigationProvider.navigateToStats(),
                   ),
-                ),
+                  _NavItem(
+                    icon: Icons.settings_rounded,
+                    label: 'Settings',
+                    isActive: navigationProvider.selectedBottomNavIndex == 2,
+                    onTap: () => navigationProvider.navigateToSettings(),
+                  ),
+                ],
               ),
             ),
           ),
