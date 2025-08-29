@@ -278,10 +278,10 @@ class _StatsPageState extends State<StatsPage>
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 4,
+                crossAxisCount: 3,
                 crossAxisSpacing: 12,
                 mainAxisSpacing: 12,
-                childAspectRatio: 0.8,
+                childAspectRatio: 0.9,
               ),
               itemCount: models.Badge.allBadges.length,
               itemBuilder: (context, index) {
